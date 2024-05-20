@@ -34,41 +34,33 @@ extern INT8U frequency;
 extern INT16U current_step_value;
 /*****************************   Functions   *******************************/
 
-
-
 void send_saldo(INT32U f)
 {
-    if (f != 0)
-    {
-        uart_send_nr(f / 1000000000 + '0');
-        f = f % 1000000000;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        uart_send_nr(f / 100000000 + '0');
-        f = f % 100000000;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        uart_send_nr(f / 10000000 + '0');
-        f = f % 10000000;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        uart_send_nr(f / 1000000 + '0');
-        f = f % 1000000;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        uart_send_nr(f / 100000 + '0');
-        f = f % 100000;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        uart_send_nr(f / 10000 + '0');
-        f = f % 10000;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        uart_send_nr(f / 1000 + '0');
-        f = f % 1000;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        uart_send_nr(f / 100 + '0');
-        f = f % 100;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        uart_send_nr(f / 10 + '0');
-        f = f % 10;
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        uart_send_nr(f + '0');
-    }
+    uart_send_nr(f / 100000000 + '0');
+    f = f % 100000000;
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    uart_send_nr(f / 10000000 + '0');
+    f = f % 10000000;
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    uart_send_nr(f / 1000000 + '0');
+    f = f % 1000000;
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    uart_send_nr(f / 100000 + '0');
+    f = f % 100000;
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    uart_send_nr(f / 10000 + '0');
+    f = f % 10000;
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    uart_send_nr(f / 1000 + '0');
+    f = f % 1000;
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    uart_send_nr(f / 100 + '0');
+    f = f % 100;
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    uart_send_nr(f / 10 + '0');
+    f = f % 10;
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    uart_send_nr(f + '0');
 }
 
 void ADC_show(INT8U s)
@@ -141,20 +133,40 @@ void ATM_task(void *pvParameters)
                 }
             }
 
-            if (uxQueueMessagesWaiting(xQueue_keypad))
+            while (pos < 9)
             {
-                if (xSemaphoreTake(xSemaphore_keypad, (TickType_t)10) == pdTRUE)
+                if (uxQueueMessagesWaiting(xQueue_button))
                 {
-                    if (xQueueReceive(xQueue_keypad, &key, portMAX_DELAY))
+                    if (xSemaphoreTake(xSemaphore_button, portMAX_DELAY))
                     {
-                        Set_cursor(0x40 + 0x80 + pos);
-                        wr_ch_LCD(key);
-                        pos++;
-
-                        Saldo = Saldo * 10 + (key - '0');
-
-                        xSemaphoreGive(xSemaphore_keypad);
+                        if (xQueueReceive(xQueue_button, &buttonEvent, portMAX_DELAY))
+                        {
+                            xSemaphoreGive(xSemaphore_button);
+                        }
                     }
+                }
+                if (uxQueueMessagesWaiting(xQueue_keypad))
+                {
+                    if (xSemaphoreTake(xSemaphore_keypad, (TickType_t)10) == pdTRUE)
+                    {
+                        if (xQueueReceive(xQueue_keypad, &key, portMAX_DELAY))
+                        {
+                            Set_cursor(0x40 + 0x80 + pos);
+                            wr_ch_LCD(key);
+                            pos++;
+
+                            Saldo = Saldo * 10 + (key - '0');
+
+                            xSemaphoreGive(xSemaphore_keypad);
+                        }
+                    }
+                }
+                if (buttonEvent == 0x01)
+                {
+                    set_ATM_state(PIN_CODE);
+                    clr_LCD();
+                    buttonEvent = 0x00;
+                    break;
                 }
             }
             if (buttonEvent == 0x01)
@@ -163,13 +175,12 @@ void ATM_task(void *pvParameters)
                 clr_LCD();
                 buttonEvent = 0x00;
             }
-
             break;
 
         case PIN_CODE:
             xQueue_keypad = xQueueCreate(128, sizeof(INT8U));
             uart_send_string("Your saldo is:  ");
-            vTaskDelay(500 / portTICK_PERIOD_MS);
+            vTaskDelay(100 / portTICK_PERIOD_MS);
             send_saldo(Saldo);
             vTaskDelay(10 / portTICK_PERIOD_MS);
             UART0_DR_R = 0x0A;
