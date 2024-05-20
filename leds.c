@@ -163,15 +163,15 @@ void led_task(void *pvParameters) {
 
                     xSemaphoreGive(xSemaphore_value);
 
-                    if(value == 100){
+                    if(value == 100 && WithdrawAmount >= 0x64){
                         red_led_toggle();
                     }
 
-                    if(value == 50){
+                    if(value == 50 && WithdrawAmount >= 0x32){
                         yellow_led_toggle();
                     }
 
-                    if (value == 10) {
+                    if (value == 10 && WithdrawAmount >= 0x0A) {
                         green_led_toggle();
                     }
                     ATM_state = PIN_CODE;
@@ -183,7 +183,5 @@ void led_task(void *pvParameters) {
 }
 
 /****************************** End Of Module *******************************/
-
-
 
 
